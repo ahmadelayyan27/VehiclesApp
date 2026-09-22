@@ -1,7 +1,15 @@
+using VehiclesApp.VehicleServices;
+using VehiclesApp.VehicleServices.IVehicleServices;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+
+builder.Services.AddHttpClient<IVehicleServices, VehicleServices>(client =>
+{
+    client.BaseAddress = new Uri("https://vpic.nhtsa.dot.gov/api/vehicles/");
+});
 
 var app = builder.Build();
 
