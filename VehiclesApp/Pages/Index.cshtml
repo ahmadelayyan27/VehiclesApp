@@ -8,15 +8,123 @@
 
 <div>
     <label for="make">Make</label>
-
-    <select id="make" name="make" class="form-select">
+    <select id="make" class="form-select">
         <option value="">-- Select Make --</option>
-
         @foreach (var make in Model.Makes)
         {
-            <option value="@make.Make_ID">
-                @make.Make_Name
-            </option>
+            <option value="@make.Make_ID">@make.Make_Name</option>
         }
     </select>
 </div>
+
+<div>
+    <label for="year">Year</label>
+    <input type="number" id="year" min="1900" max="2026" placeholder="e.g. 2015" />
+</div>
+
+<button id="loadBtn" type="button">Search</button>
+
+<h3>Vehicle Types</h3>
+<ul id="vehicleTypesList"></ul>
+
+<h3>Models</h3>
+<ul id="modelsList"></ul>
+
+@section Scripts {
+    <script>
+        document.getElementById('loadBtn').addEventListener('click', async () => {
+
+            const makeId = document.getElementById('make').value;
+            const year = document.getElementById('year').value;
+
+            if (!makeId || !year) {
+                alert('Please select a make and enter a year.');
+                return;
+            }
+
+            const typesList =
+                document.getElementById('vehicleTypesList');
+
+            const modelsList =
+                document.getElementById('modelsList');
+
+            typesList.innerHTML = '<li>Loading...</li>';
+            modelsList.innerHTML = '<li>Loading...</li>';
+
+            try {
+
+                const [typesRes, modelsRes] = await Promise.all([
+
+                    fetch(
+                        `?handler=VehicleTypesForMakeId&makeId=${makeId}`
+                    ),
+
+                    fetch(
+                        `?handler=ModelsForMakeIdAndYear&makeId=${makeId}&year=${year}`
+                    )
+                ]);
+
+                if (!typesRes.ok) {
+                    throw new Error('Failed to load vehicle types.');
+                }
+
+                if (!modelsRes.ok) {
+                    throw new Error('Failed to load models.');
+                }
+
+                const types = await typesRes.json();
+                const models = await modelsRes.json();
+
+                // Vehicle Types
+                typesList.innerHTML = '';
+
+                if (types.length === 0) {
+
+                    typesList.innerHTML =
+                        '<li>No vehicle types found.</li>';
+
+                } else {
+
+                    types.forEach(t => {
+
+                        const li = document.createElement('li');
+
+                        li.textContent = t.vehicleTypeName;
+
+                        typesList.appendChild(li);
+                    });
+                }
+
+                // Models
+                modelsList.innerHTML = '';
+
+                if (models.length === 0) {
+
+                    modelsList.innerHTML =
+                        '<li>No models found.</li>';
+
+                } else {
+
+                    models.forEach(m => {
+
+                        const li = document.createElement('li');
+
+                        li.textContent = m.model_Name;
+
+                        modelsList.appendChild(li);
+                    });
+                }
+
+            } catch (err) {
+
+                console.error(err);
+
+                typesList.innerHTML =
+                    '<li>Error loading vehicle types.</li>';
+
+                modelsList.innerHTML =
+                    '<li>Error loading models.</li>';
+            }
+        });
+    </script>
+}

@@ -20,5 +20,14 @@ public class IndexModel : PageModel
     {
         Makes = await _vehicleServices.GetAllMakesAsync();
     }
-    
+    public async Task<JsonResult> OnGetVehicleTypesForMakeIdAsync(int makeId)
+    {
+        var types = await _vehicleServices.GetVehicleTypesForMakeIdAsync(makeId);
+        return new JsonResult(types);
+    }
+    public async Task<JsonResult> OnGetModelsForMakeIdAndYearAsync(int makeId, int year)
+    {
+        var models = await _vehicleServices.GetModelsForMakeIdAndYearAsync(makeId, year);
+        return new JsonResult(models);
+    }
 }
