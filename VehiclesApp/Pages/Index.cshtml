@@ -7,132 +7,341 @@
 <link rel="stylesheet" href="~/css/vehicle.css" />
 
 <div class="vehicle-container">
-    <h1>Select Vehicle</h1>
 
-    <div class="form-group">
-        <label for="make">Make</label>
-        <select id="make" class="form-select">
-            <option value="">-- Select Make --</option>
-            @foreach (var make in Model.Makes)
-            {
-                <option value="@make.Make_ID">@make.Make_Name</option>
-            }
-        </select>
+    <div class="vehicle-header">
+        <h1>Vehicle Search</h1>
+        <p>
+            Select a vehicle make and year to view available vehicle types
+            and models.
+        </p>
     </div>
 
-    <div class="form-group">
-        <label for="year">Year</label>
-        <input type="number" id="year" min="1900" max="2026" placeholder="e.g. 2015" />
+    <div class="search-card">
+
+        <div class="form-group">
+            <label for="make">
+                Vehicle Make
+            </label>
+
+            <select id="make" class="form-select">
+                <option value="">-- Select Vehicle Make --</option>
+
+                @foreach (var make in Model.Makes)
+                {
+                    <option value="@make.Make_ID">
+                        @make.Make_Name
+                    </option>
+                }
+            </select>
+
+            <small class="field-hint">
+                Start typing to quickly find a vehicle make.
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="year">
+                Model Year
+            </label>
+
+            <input
+                type="number"
+                id="year"
+                class="form-input"
+                min="1980"
+                max="@DateTime.Now.Year"
+                placeholder="e.g. 2015"
+                autocomplete="off" />
+        </div>
+
+        <div id="validationMessage" class="message error-message" role="alert"></div>
+
+        <div class="button-group">
+
+            <button id="loadBtn" type="button" class="search-button">
+                <span id="buttonText">Search Vehicles</span>
+                <span id="buttonSpinner" class="spinner hidden"></span>
+            </button>
+
+            <button id="clearBtn" type="button" class="clear-button">
+                Clear
+            </button>
+
+        </div>
+
     </div>
 
-    <button id="loadBtn" type="button">Search</button>
+    <div id="resultsContainer" class="results-container">
 
-    <div class="results-section">
-        <h3>Vehicle Types</h3>
-        <ul id="vehicleTypesList"></ul>
+        <div class="results-section">
+            <div class="results-title">
+                <h2>Vehicle Types</h2>
+                <span id="typesCount" class="result-count">0</span>
+            </div>
+
+            <ul id="vehicleTypesList" class="results-list">
+                <li class="empty-result">
+                    Select a make and year to search.
+                </li>
+            </ul>
+        </div>
+
+        <div class="results-section">
+            <div class="results-title">
+                <h2>Models</h2>
+                <span id="modelsCount" class="result-count">0</span>
+            </div>
+
+            <ul id="modelsList" class="results-list">
+                <li class="empty-result">
+                    Select a make and year to search.
+                </li>
+            </ul>
+        </div>
+
     </div>
 
-    <div class="results-section">
-        <h3>Models</h3>
-        <ul id="modelsList"></ul>
-    </div>
 </div>
 
 @section Scripts {
+
     <script>
-        document.getElementById('loadBtn').addEventListener('click', async () => {
 
-            const makeId = document.getElementById('make').value;
-            const year = document.getElementById('year').value;
+        const makeSelect = document.getElementById('make');
+        const yearInput = document.getElementById('year');
 
-            if (!makeId || !year) {
-                alert('Please select a make and enter a year.');
+        const loadBtn = document.getElementById('loadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        const buttonText = document.getElementById('buttonText');
+        const buttonSpinner = document.getElementById('buttonSpinner');
+
+        const validationMessage =
+            document.getElementById('validationMessage');
+
+        const typesList =
+            document.getElementById('vehicleTypesList');
+
+        const modelsList =
+            document.getElementById('modelsList');
+
+        const typesCount =
+            document.getElementById('typesCount');
+
+        const modelsCount =
+            document.getElementById('modelsCount');
+
+        const currentYear = new Date().getFullYear();
+
+
+        loadBtn.addEventListener('click', async () => {
+
+            clearMessage();
+
+            const makeId = makeSelect.value;
+            const year = Number(yearInput.value);
+
+            if (!makeId) {
+                showMessage('Please select a vehicle make.');
+                makeSelect.focus();
                 return;
             }
 
-            const typesList =
-                document.getElementById('vehicleTypesList');
+            if (!yearInput.value) {
+                showMessage('Please enter a model year.');
+                yearInput.focus();
+                return;
+            }
 
-            const modelsList =
-                document.getElementById('modelsList');
+            if (year < 1980 || year > currentYear) {
+                showMessage(
+                    `Please enter a year between 1980 and ${currentYear}.`
+                );
+                yearInput.focus();
+                return;
+            }
 
-            typesList.innerHTML = '<li>Loading...</li>';
-            modelsList.innerHTML = '<li>Loading...</li>';
+            setLoading(true);
+
+            typesList.innerHTML =
+                '<li class="loading-result">Loading vehicle types...</li>';
+
+            modelsList.innerHTML =
+                '<li class="loading-result">Loading models...</li>';
+
+            typesCount.textContent = '...';
+            modelsCount.textContent = '...';
+
 
             try {
 
                 const [typesRes, modelsRes] = await Promise.all([
 
                     fetch(
-                        `?handler=VehicleTypesForMakeId&makeId=${makeId}`
+                        `?handler=VehicleTypesForMakeId&makeId=${encodeURIComponent(makeId)}`
                     ),
 
                     fetch(
-                        `?handler=ModelsForMakeIdAndYear&makeId=${makeId}&year=${year}`
+                        `?handler=ModelsForMakeIdAndYear&makeId=${encodeURIComponent(makeId)}&year=${encodeURIComponent(year)}`
                     )
+
                 ]);
+
 
                 if (!typesRes.ok) {
                     throw new Error('Failed to load vehicle types.');
                 }
 
                 if (!modelsRes.ok) {
-                    throw new Error('Failed to load models.');
+                    throw new Error('Failed to load vehicle models.');
                 }
+
 
                 const types = await typesRes.json();
                 const models = await modelsRes.json();
 
-                // Vehicle Types
+
                 typesList.innerHTML = '';
 
-                if (types.length === 0) {
+                if (!types || types.length === 0) {
 
                     typesList.innerHTML =
-                        '<li>No vehicle types found.</li>';
+                        '<li class="empty-result">No vehicle types found.</li>';
 
                 } else {
 
-                    types.forEach(t => {
+                    types.forEach(type => {
 
                         const li = document.createElement('li');
 
-                        li.textContent = t.vehicleTypeName;
+                        li.textContent =
+                            type.vehicleTypeName;
 
                         typesList.appendChild(li);
+
                     });
+
                 }
 
-                // Models
+
                 modelsList.innerHTML = '';
 
-                if (models.length === 0) {
+                if (!models || models.length === 0) {
 
                     modelsList.innerHTML =
-                        '<li>No models found.</li>';
+                        '<li class="empty-result">No models found for this make and year.</li>';
 
                 } else {
 
-                    models.forEach(m => {
+                    models.forEach(model => {
 
                         const li = document.createElement('li');
 
-                        li.textContent = m.model_Name;
+                        li.textContent =
+                            model.model_Name;
 
                         modelsList.appendChild(li);
+
                     });
+
                 }
 
-            } catch (err) {
 
-                console.error(err);
+                typesCount.textContent = types?.length ?? 0;
+                modelsCount.textContent = models?.length ?? 0;
+
+            }
+            catch (error) {
+
+                console.error(error);
 
                 typesList.innerHTML =
-                    '<li>Error loading vehicle types.</li>';
+                    '<li class="error-result">Unable to load vehicle types.</li>';
 
                 modelsList.innerHTML =
-                    '<li>Error loading models.</li>';
+                    '<li class="error-result">Unable to load vehicle models.</li>';
+
+                typesCount.textContent = '0';
+                modelsCount.textContent = '0';
+
+                showMessage(
+                    'Something went wrong while loading the vehicle data. Please try again.'
+                );
+
             }
+            finally {
+
+                setLoading(false);
+
+            }
+
         });
+
+
+        clearBtn.addEventListener('click', () => {
+
+            makeSelect.value = '';
+            yearInput.value = '';
+
+            clearMessage();
+
+            typesList.innerHTML =
+                '<li class="empty-result">Select a make and year to search.</li>';
+
+            modelsList.innerHTML =
+                '<li class="empty-result">Select a make and year to search.</li>';
+
+            typesCount.textContent = '0';
+            modelsCount.textContent = '0';
+
+        });
+
+
+        yearInput.addEventListener('keydown', (event) => {
+
+            if (event.key === 'Enter') {
+                loadBtn.click();
+            }
+
+        });
+
+
+        function setLoading(isLoading) {
+
+            loadBtn.disabled = isLoading;
+            clearBtn.disabled = isLoading;
+            makeSelect.disabled = isLoading;
+            yearInput.disabled = isLoading;
+
+            if (isLoading) {
+
+                buttonText.textContent = 'Searching...';
+                buttonSpinner.classList.remove('hidden');
+
+            } else {
+
+                buttonText.textContent = 'Search Vehicles';
+                buttonSpinner.classList.add('hidden');
+
+            }
+
+        }
+
+
+        function showMessage(message) {
+
+            validationMessage.textContent = message;
+            validationMessage.classList.add('visible');
+
+        }
+
+
+        function clearMessage() {
+
+            validationMessage.textContent = '';
+            validationMessage.classList.remove('visible');
+
+        }
+
     </script>
 }
