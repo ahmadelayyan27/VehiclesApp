@@ -1,0 +1,76 @@
+# VehiclesApp
+
+A .NET Core Razor Pages web application that allows users to select a vehicle make and manufacture year and view the available vehicle types and models.
+
+## Technologies
+
+* ASP.NET Core Razor Pages
+* C#
+* HTML, CSS, JavaScript
+* Docker
+* NHTSA vPIC API
+
+## NHTSA APIs
+
+* **Get All Makes**
+  `https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json`
+
+* **Get Vehicle Types**
+  `https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/{makeId}?format=json`
+
+* **Get Models by Make and Year**
+  `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeIdYear/makeId/{makeId}/modelyear/{year}?format=json`
+
+## Run Locally
+
+### Requirements
+
+* .NET SDK
+* Git
+* Docker (if running with Docker)
+
+### Using .NET
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd VehiclesApp
+```
+
+Run the application:
+
+```bash
+dotnet restore
+dotnet run
+```
+
+Open the URL shown in the terminal.
+
+## Run with Docker
+
+Build the Docker image:
+
+```bash
+docker build -t vehiclesapp .
+```
+
+Run the container:
+
+```bash
+docker run -d -p 8080:8080 --name vehiclesapp vehiclesapp
+```
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+## Example
+
+Select **BMW**, enter **2015**, and click **Search Vehicles** to view the available vehicle types and models.
+
+## AWS
+
+The application is Dockerized and can be deployed on an AWS EC2 instance.
